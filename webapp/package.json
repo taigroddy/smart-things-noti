@@ -1,0 +1,36 @@
+{
+  "name": "smartthings-washer-fcm-webhook",
+  "version": "1.0.0",
+  "description": "SmartThings Webhook receiver and FCM Data-Only Push Notification sender deployable via Docker and Vercel",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "setup:subscription": "node scripts/setup-subscription.js",
+    "test:ping": "node scripts/test-webhook.js ping",
+    "test:confirm": "node scripts/test-webhook.js confirmation",
+    "test:event": "node scripts/test-webhook.js event"
+  },
+  "keywords": [
+    "smartthings",
+    "samsung",
+    "fcm",
+    "firebase",
+    "webhook",
+    "push-notification",
+    "docker",
+    "vercel"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@smartthings/smartapp": "^4.3.8",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

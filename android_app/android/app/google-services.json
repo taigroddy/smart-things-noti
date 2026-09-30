@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "438119016666",
+    "project_id": "smart-things-noti",
+    "storage_bucket": "smart-things-noti.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:438119016666:android:36fa5413cb225509b25de3",
+        "android_client_info": {
+          "package_name": "com.smartthingnoti.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBn3waGdWjic3k7SBroxWclU8aQDepMja0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

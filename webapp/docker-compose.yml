@@ -1,0 +1,14 @@
+services:
+  smartthings-webhook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartthings-webhook
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000

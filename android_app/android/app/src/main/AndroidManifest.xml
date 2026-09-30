@@ -1,0 +1,91 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ================================================
+         QUYỀN BẮT BUỘC CHO FCM DATA-ONLY MESSAGE
+         VÀ FAKE INCOMING CALL UI
+         ================================================ -->
+
+    <!-- Nhận thông báo (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Đánh thức màn hình khi máy giặt xong -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+
+    <!-- Hiển thị màn hình cuộc gọi khi điện thoại khoá -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+
+    <!-- Cho phép activity hiển thị trên màn hình khoá -->
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD"/>
+
+    <!-- Chạy FCM background handler (foreground service) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+
+    <!-- Kết nối internet để nhận FCM -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <!-- ================================================
+         VIBRATION (cho cuộc gọi giả)
+         ================================================ -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <application
+        android:label="Washer Notifier"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+
+        <!-- Main Activity — hiển thị trên màn hình khoá khi có cuộc gọi giả -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+            <!-- Deep Link OAuth2 Callback: washerapp://auth -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="washerapp"
+                    android:host="auth"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Meta-data Firebase -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="washer_notifier_channel"/>
+
+        <!-- Tắt notification mặc định của FCM (vì chúng ta tự xử lý qua Data Message) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher"/>
+
+        <!-- FlutterActivity boilerplate -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2"/>
+    </application>
+
+    <!-- Truy vấn packages cần thiết cho callkit -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+        </intent>
+    </queries>
+
+</manifest>
