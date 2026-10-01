@@ -32,14 +32,6 @@ smartApp.page('mainPage', (context, page, configData) => {
   });
 });
 
-/**
- * Helper in toàn bộ thông tin thiết bị dưới dạng JSON đầy đủ
- */
-function logDeviceDetails(tag, deviceId, device) {
-  if (!device) return;
-  console.log(`\n[SmartApp 📦 Device JSON - ${tag}] deviceId: ${deviceId}\n` + JSON.stringify(device, null, 2) + '\n');
-}
-
 
 // =========================================================================
 // 2. Xử lý Cài đặt / Cập nhật (Install & Update Lifecycle)
@@ -57,27 +49,31 @@ async function handleInstallOrUpdate(context) {
     console.warn('[SmartApp] Bỏ qua lỗi unsubscribeAll:', err.message);
   }
 
-  // 2. Tạo subscription mới lắng nghe sự kiện của thiết bị washerDevice vừa chọn,
-  // cụ thể là thuộc tính machineState hoặc washerOperatingState khi giá trị chuyển thành finished hoặc stop.
+  // 2. Tạo subscription mới lắng nghe sự kiện của thiết bị washerDevice
   const washerDevices = context.config.washerDevice || [];
   try {
     if (context.api?.subscriptions && washerDevices.length > 0) {
+      
+      // Đăng ký chuẩn chung (Handler 1)
       await context.api.subscriptions.subscribeToDevices(
         washerDevices,
         'washerOperatingState',
-        'washerOperatingState',
-        'washerHandler'
+        'machineState',
+        'washerHandlerStandard' // <-- Đổi tên
       );
+
+      // Đăng ký chuẩn nội bộ của Samsung (Handler 2)
       await context.api.subscriptions.subscribeToDevices(
         washerDevices,
-        'machineState',
-        'machineState',
-        'washerHandler'
+        'samsungce.washerOperatingState',
+        'operatingState',
+        'washerHandlerSamsung'  // <-- Đổi tên
       );
+
       console.log(`[SmartApp] Đã đăng ký subscriptions cho ${washerDevices.length} thiết bị.`);
     }
   } catch (subErr) {
-    console.warn('[SmartApp] Bỏ qua lỗi subscribeToDevices:', subErr.message);
+    console.error('[SmartApp ❌] Lỗi subscribeToDevices:', subErr.response?.data || subErr.message);
   }
 
   // 3. Lấy fcmToken bằng hàm context.configStringValue('fcmToken')
@@ -85,32 +81,27 @@ async function handleInstallOrUpdate(context) {
 
   // 4. Lấy danh sách các máy giặt được chọn (gồm deviceId và fetch thêm deviceName nếu cần)
   const devicesList = [];
-  for (const item of washerDevices) {
-    const deviceId = item.deviceConfig?.deviceId;
-    if (!deviceId) continue;
+  const deviceIds = washerDevices.map(item => item.deviceConfig?.deviceId || item).filter(Boolean);
 
-    console.log(`[SmartApp 🔍] Đang lấy thông tin thiết bị: ${deviceId} (componentId: ${item.deviceConfig?.componentId || 'main'})`);
-    let deviceName = 'Máy giặt Samsung';
+  for (const deviceId of deviceIds) {
+    let displayName = 'Máy giặt Samsung';
     try {
       if (context.api?.devices) {
-        const device = await context.api.devices.get(deviceId);
-        logDeviceDetails('INSTALL/UPDATE', deviceId, device);
-        deviceName = device.label || device.name || deviceName;
+        const deviceDetails = await context.api.devices.get(deviceId);
+        displayName = deviceDetails.label || deviceDetails.name || displayName;
       } else {
         console.warn(`[SmartApp ⚠️] context.api.devices không khả dụng cho deviceId ${deviceId}`);
       }
-    } catch (err) {
-      console.warn(`[SmartApp ⚠️] Không thể lấy metadata cho deviceId ${deviceId}: ${err.message}`);
+    } catch (error) {
+      console.error(`Lỗi lấy thông tin thiết bị ${deviceId}:`, error);
     }
 
     devicesList.push({
       id: deviceId,
-      name: deviceName,
+      name: displayName,
     });
   }
 
-  // 5. Dùng Firebase Admin đẩy một tin nhắn Data Message tới fcmToken này với payload:
-  // { data: { type: 'SYNC_DEVICES', devices: '[{"id":"...","name":"..."}]' } }
   if (fcmToken && devicesList.length > 0) {
     console.log(`[SmartApp 🚀] Gửi SYNC_DEVICES (${devicesList.length} máy) về fcmToken: ${fcmToken.slice(0, 12)}...`);
     try {
@@ -148,7 +139,6 @@ async function handleWasherEvent(context, event) {
     try {
       if (context.api?.devices && deviceId) {
         const device = await context.api.devices.get(deviceId);
-        logDeviceDetails('EVENT', deviceId, device);
         deviceName = device.label || device.name || deviceName;
       } else {
         console.warn(`[SmartApp ⚠️] context.api.devices không khả dụng hoặc thiếu deviceId (${deviceId})`);
