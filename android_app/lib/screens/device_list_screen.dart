@@ -528,21 +528,10 @@ class _DeviceListScreenState extends State<DeviceListScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Model: ${device.modelCode}',
+                      'Model: ${device.modelCode.isNotEmpty ? device.modelCode : "Samsung Smart Washer"}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Colors.grey.shade700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'ID: ${device.id}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                        fontFamily: 'monospace',
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

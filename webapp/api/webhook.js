@@ -14,16 +14,17 @@ smartApp.enableEventLogging(2);
 smartApp.page('mainPage', (context, page, configData) => {
   page.name('Washer Notifier');
   page.section('configSection', section => {
-    // 1. Ô nhập Token đã test thành công
+    // 2. configSection Label
+    section.name('Lựa chọn');
+
+    // 1. Input FCM token
     section.textSetting('fcmToken')
-      .name('FCM Device Token')
-      .description('Dán mã Token vào đây')
+      .name('Lấy mã từ Ứng dụng Washer Notifier')
       .required(true);
 
-    // 2. Ô chọn thiết bị an toàn
+    // 3. Máy giặt samsung
     section.deviceSetting('washerDevice')
-      .name('Máy giặt Samsung')
-      .description('Chọn máy giặt cần theo dõi')
+      .name('Danh sách máy giặt')
       .capabilities(['washerOperatingState'])
       .permissions('r')
       .multiple(true)
