@@ -1,5 +1,5 @@
 import { SmartApp } from '@smartthings/smartapp';
-import { sendSyncDeviceAlert, sendTriggerCallAlert } from '../lib/fcmService.js';
+import { sendSyncDevicesAlert, sendSyncDeviceAlert, sendTriggerCallAlert } from '../lib/fcmService.js';
 
 /**
  * Khởi tạo SmartApp bằng thư viện chính thức @smartthings/smartapp
@@ -74,7 +74,8 @@ async function handleInstallOrUpdate(context) {
   // 3. Lấy fcmToken bằng hàm context.configStringValue('fcmToken')
   const fcmToken = context.configStringValue('fcmToken') || process.env.FCM_DEVICE_TOKEN;
 
-  // 4. Lặp qua danh sách thiết bị được chọn, lấy deviceId và deviceName
+  // 4. Lấy danh sách các máy giặt được chọn (gồm deviceId và fetch thêm deviceName nếu cần)
+  const devicesList = [];
   for (const item of washerDevices) {
     const deviceId = item.deviceConfig?.deviceId;
     if (!deviceId) continue;
@@ -87,16 +88,21 @@ async function handleInstallOrUpdate(context) {
       }
     } catch (_) {}
 
-    // 5. Gọi hàm Firebase Admin gửi một Data Message (Silent push) tới fcmToken với payload:
-    // { type: "SYNC_DEVICE", deviceId: "...", deviceName: "..." }
-    if (fcmToken) {
-      console.log(`[SmartApp 🚀] Gửi SYNC_DEVICE về fcmToken: ${fcmToken.slice(0, 12)}... (Máy: ${deviceName} - ${deviceId})`);
-      try {
-        await sendSyncDeviceAlert({ fcmToken, deviceId, deviceName });
-        console.log('[SmartApp ✅] Gửi SYNC_DEVICE thành công!');
-      } catch (fcmErr) {
-        console.error('[SmartApp ❌] Lỗi gửi SYNC_DEVICE:', fcmErr.message);
-      }
+    devicesList.push({
+      id: deviceId,
+      name: deviceName,
+    });
+  }
+
+  // 5. Dùng Firebase Admin đẩy một tin nhắn Data Message tới fcmToken này với payload:
+  // { data: { type: 'SYNC_DEVICES', devices: '[{"id":"...","name":"..."}]' } }
+  if (fcmToken && devicesList.length > 0) {
+    console.log(`[SmartApp 🚀] Gửi SYNC_DEVICES (${devicesList.length} máy) về fcmToken: ${fcmToken.slice(0, 12)}...`);
+    try {
+      await sendSyncDevicesAlert({ fcmToken, devices: devicesList });
+      console.log('[SmartApp ✅] Gửi SYNC_DEVICES thành công!');
+    } catch (fcmErr) {
+      console.error('[SmartApp ❌] Lỗi gửi SYNC_DEVICES:', fcmErr.message);
     }
   }
 }

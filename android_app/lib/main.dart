@@ -9,6 +9,7 @@ import 'firebase_options.dart';
 import 'audio_service.dart';
 import 'screens/home_screen.dart';
 import 'services/call_manager.dart';
+import 'services/device_storage.dart';
 
 // ============================================================
 // BACKGROUND MESSAGE HANDLER — Phải là top-level function
@@ -28,7 +29,16 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final data = message.data;
     debugPrint('[FCM Background Passive] Nhận Data Message: ${jsonEncode(data)}');
 
-    // Lập tức kích hoạt Fake Call khi nhận tín hiệu TRIGGER_CALL mà không cần database
+    final type = data['type']?.toString();
+
+    // 1. Block xử lý hứng Data Message có type: 'SYNC_DEVICES'
+    if (type == 'SYNC_DEVICES' || type == 'SYNC_DEVICE') {
+      debugPrint('[FCM Background] Đang lưu danh sách thiết bị vào Local Storage...');
+      await DeviceStorage.handleSyncMessage(Map<String, dynamic>.from(data));
+      return;
+    }
+
+    // 2. Lập tức kích hoạt Fake Call khi nhận tín hiệu TRIGGER_CALL mà không cần database
     await CallManager.handleFCMMessage(Map<String, dynamic>.from(data));
   } catch (e) {
     debugPrint('[FCM Background Error]: $e');
@@ -105,8 +115,20 @@ void main() async {
 
   // Lắng nghe Foreground FCM (khi người dùng đang mở app)
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-    debugPrint('[FCM Foreground Passive] Nhận Data Message: ${jsonEncode(message.data)}');
-    await CallManager.handleFCMMessage(Map<String, dynamic>.from(message.data));
+    final data = message.data;
+    debugPrint('[FCM Foreground Passive] Nhận Data Message: ${jsonEncode(data)}');
+
+    final type = data['type']?.toString();
+
+    // 1. Block xử lý hứng Data Message có type: 'SYNC_DEVICES'
+    if (type == 'SYNC_DEVICES' || type == 'SYNC_DEVICE') {
+      debugPrint('[FCM Foreground] Đang lưu danh sách thiết bị vào Local Storage...');
+      await DeviceStorage.handleSyncMessage(Map<String, dynamic>.from(data));
+      return;
+    }
+
+    // 2. Kích hoạt Fake Call khi nhận tín hiệu TRIGGER_CALL
+    await CallManager.handleFCMMessage(Map<String, dynamic>.from(data));
   });
 
   runApp(const WasherNotifierApp());

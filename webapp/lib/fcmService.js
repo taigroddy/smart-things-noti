@@ -81,8 +81,21 @@ async function sendRawDataMessage(targetToken, dataPayload) {
 }
 
 /**
- * 1. Bắn Data Message tự động đồng bộ thiết bị (SYNC_DEVICE)
+ * 1. Bắn Data Message tự động đồng bộ danh sách thiết bị (SYNC_DEVICES)
  * Kích hoạt khi SmartThings gửi INSTALL hoặc UPDATE lifecycle.
+ * Payload: { type: 'SYNC_DEVICES', devices: '[{"id":"...","name":"..."}]' }
+ */
+export async function sendSyncDevicesAlert({ fcmToken, devices }) {
+  const devicesJson = typeof devices === 'string' ? devices : JSON.stringify(devices);
+  return sendRawDataMessage(fcmToken, {
+    type: 'SYNC_DEVICES',
+    devices: devicesJson,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Bắn Data Message tự động đồng bộ thiết bị đơn lẻ (SYNC_DEVICE - tương thích ngược)
  */
 export async function sendSyncDeviceAlert({ fcmToken, deviceId, deviceName }) {
   return sendRawDataMessage(fcmToken, {
@@ -122,7 +135,9 @@ export async function sendFCMAlert(overrideTarget, customData = {}) {
 }
 
 export default {
+  sendSyncDevicesAlert,
   sendSyncDeviceAlert,
   sendTriggerCallAlert,
   sendFCMAlert,
 };
+
