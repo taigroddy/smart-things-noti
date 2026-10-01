@@ -39,6 +39,11 @@ smartApp.page('mainPage', (context, page, configData) => {
     section.paragraphSetting('infoText')
       .name('Trạng thái kết nối')
       .description('Nếu bạn nhìn thấy dòng chữ này, kết nối Vercel đã thành công và không bị crash!');
+
+    section.stringSetting('fcmToken')
+      .name('FCM Device Token')
+      .description('Dán FCM Device Token từ app di động')
+      .required(true);
   });
 });
 
