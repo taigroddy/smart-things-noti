@@ -1,26 +1,5 @@
 import { SmartApp } from '@smartthings/smartapp';
-import Section from '@smartthings/smartapp/lib/pages/section.js';
-import TextSetting from '@smartthings/smartapp/lib/pages/text-setting.js';
 import { sendSyncDeviceAlert, sendTriggerCallAlert } from '../lib/fcmService.js';
-
-/**
- * Patch Section để hỗ trợ stringSetting với type "STRING" (thay vì "TEXT")
- * nhằm tránh lỗi crash UI trên SmartThings Mobile App
- */
-class StringSetting extends TextSetting {
-  constructor(section, id) {
-    super(section, id);
-    this._type = 'STRING';
-  }
-}
-
-if (!Section.prototype.stringSetting) {
-  Section.prototype.stringSetting = function(id) {
-    const result = new StringSetting(this, id);
-    this._settings.push(result);
-    return result;
-  };
-}
 
 /**
  * Khởi tạo SmartApp bằng thư viện chính thức @smartthings/smartapp
@@ -30,34 +9,20 @@ export const smartApp = new SmartApp();
 smartApp.enableEventLogging(2);
 
 // =========================================================================
-// 1. Khởi tạo SmartApp & Giao diện cấu hình (Configuration Lifecycle) - DEBUG CRASH
+// 1. Khởi tạo SmartApp & Giao diện cấu hình (Configuration Lifecycle)
 // =========================================================================
 smartApp.page('mainPage', (context, page, configData) => {
   page.name('Washer Notifier');
   page.section('configSection', section => {
-    // Chỉ dùng paragraph và textSetting, tạm thời comment (ẩn) hoàn toàn deviceSetting
-    section.paragraphSetting('infoText')
-      .name('Trạng thái')
-      .description('Test UI - Bước 2');
-
+    // 1. Ô nhập Token đã test thành công
     section.textSetting('fcmToken')
       .name('FCM Device Token')
       .description('Dán mã Token vào đây')
       .required(true);
-  });
-});
 
-/*
-// [TẠM COMMENT PHẦN CẤU HÌNH GỐC ĐỂ DEBUG]
-smartApp.page('mainPage_production', (context, page, configData) => {
-  page.section('settings', section => {
-    section.stringSetting('fcmToken')
-      .name('FCM Device Token')
-      .description('Dán FCM Device Token từ ứng dụng di động Washer Notifier')
-      .required(true);
-
+    // 2. Ô chọn thiết bị an toàn
     section.deviceSetting('washerDevice')
-      .name('Máy Giặt Samsung')
+      .name('Máy giặt Samsung')
       .description('Chọn máy giặt cần theo dõi')
       .capabilities(['washerOperatingState'])
       .permissions('r')
@@ -65,7 +30,6 @@ smartApp.page('mainPage_production', (context, page, configData) => {
       .required(true);
   });
 });
-*/
 
 // =========================================================================
 // 2. Xử lý Cài đặt / Cập nhật (Install & Update Lifecycle)

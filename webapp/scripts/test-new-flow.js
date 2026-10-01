@@ -98,7 +98,7 @@ async function runTests() {
     `Trường washerDevice lọc chính xác 1 capability ['washerOperatingState'] tránh lỗi bộ lọc AND`
   );
   assert(Boolean(fcmSetting), `Phase PAGE có trường fcmToken`);
-  assert(fcmSetting?.type === 'STRING', `Trường fcmToken có type là "STRING" chuẩn (khắc phục lỗi Crash UI thay vì "TEXT")`);
+  assert(fcmSetting?.type === 'TEXT', `Trường fcmToken có type là "TEXT" từ native textSetting`);
   assert(fcmSetting?.required === true, `Trường fcmToken bắt buộc nhập (required: true)`);
   console.log('');
 
