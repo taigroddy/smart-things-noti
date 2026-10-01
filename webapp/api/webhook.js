@@ -30,17 +30,37 @@ export const smartApp = new SmartApp();
 smartApp.enableEventLogging(2);
 
 // =========================================================================
-// 1. Khởi tạo SmartApp & Giao diện cấu hình (Configuration Lifecycle) - MINIMAL DEBUG
+// 1. Khởi tạo SmartApp & Giao diện cấu hình (Configuration Lifecycle) - DEBUG CRASH
 // =========================================================================
 smartApp.page('mainPage', (context, page, configData) => {
   page.name('Washer Notifier');
-  page.section('infoSection', section => {
-    section.name('Thông Báo');
-    section.paragraphSetting('info')
-      .text('Hello World')
-      .description('SmartApp đang hoạt động bình thường.');
+  page.section('debugSection', section => {
+    section.name('Cấu hình đang được test');
+    section.paragraphSetting('infoText')
+      .name('Trạng thái kết nối')
+      .description('Nếu bạn nhìn thấy dòng chữ này, kết nối Vercel đã thành công và không bị crash!');
   });
 });
+
+/*
+// [TẠM COMMENT PHẦN CẤU HÌNH GỐC ĐỂ DEBUG]
+smartApp.page('mainPage_production', (context, page, configData) => {
+  page.section('settings', section => {
+    section.stringSetting('fcmToken')
+      .name('FCM Device Token')
+      .description('Dán FCM Device Token từ ứng dụng di động Washer Notifier')
+      .required(true);
+
+    section.deviceSetting('washerDevice')
+      .name('Máy Giặt Samsung')
+      .description('Chọn máy giặt cần theo dõi')
+      .capabilities(['washerOperatingState'])
+      .permissions('r')
+      .multiple(true)
+      .required(true);
+  });
+});
+*/
 
 // =========================================================================
 // 2. Xử lý Cài đặt / Cập nhật (Install & Update Lifecycle)
