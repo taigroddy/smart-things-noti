@@ -34,15 +34,15 @@ smartApp.enableEventLogging(2);
 // =========================================================================
 smartApp.page('mainPage', (context, page, configData) => {
   page.name('Washer Notifier');
-  page.section('debugSection', section => {
-    section.name('Cấu hình đang được test');
+  page.section('configSection', section => {
+    // Chỉ dùng paragraph và textSetting, tạm thời comment (ẩn) hoàn toàn deviceSetting
     section.paragraphSetting('infoText')
-      .name('Trạng thái kết nối')
-      .description('Nếu bạn nhìn thấy dòng chữ này, kết nối Vercel đã thành công và không bị crash!');
+      .name('Trạng thái')
+      .description('Test UI - Bước 2');
 
-    section.stringSetting('fcmToken')
+    section.textSetting('fcmToken')
       .name('FCM Device Token')
-      .description('Dán FCM Device Token từ app di động')
+      .description('Dán mã Token vào đây')
       .required(true);
   });
 });
