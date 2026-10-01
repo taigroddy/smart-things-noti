@@ -33,34 +33,13 @@ smartApp.page('mainPage', (context, page, configData) => {
 });
 
 /**
- * Helper in chi tiết thông tin thiết bị (raw JSON và tóm tắt các trường hữu dụng)
+ * Helper in toàn bộ thông tin thiết bị dưới dạng JSON đầy đủ
  */
 function logDeviceDetails(tag, deviceId, device) {
   if (!device) return;
-  console.log(`\n================== [${tag}] CHI TIẾT THIẾT BỊ (${deviceId}) ==================`);
-  console.log('[Raw JSON Device Object]:\n' + JSON.stringify(device, null, 2));
-
-  const categories = device.components?.flatMap((c) => c.categories?.map((cat) => cat.name)).filter(Boolean) || [];
-  const capabilities = device.components?.flatMap((c) => c.capabilities?.map((cap) => cap.id)).filter(Boolean) || [];
-  const model = device.ocf?.modelNumber || device.deviceTypeName || 'N/A';
-  const manufacturer = device.manufacturerName || 'N/A';
-  const label = device.label || 'Chưa đặt tên riêng';
-  const name = device.name || 'N/A';
-  const roomId = device.roomId || 'N/A';
-  const locationId = device.locationId || 'N/A';
-  const networkType = device.deviceNetworkType || 'N/A';
-
-  console.log('📋 [Tóm tắt thông tin hữu dụng]:');
-  console.log(`   - Tên hiển thị (Label):  ${label}`);
-  console.log(`   - Tên hệ thống (Name):   ${name}`);
-  console.log(`   - Mã Model (Model):      ${model}`);
-  console.log(`   - Nhà sản xuất:          ${manufacturer}`);
-  console.log(`   - Loại thiết bị (Cats):  ${categories.join(', ') || 'N/A'}`);
-  console.log(`   - Phòng / Vị trí (Room): Room ID: ${roomId} | Location ID: ${locationId}`);
-  console.log(`   - Kết nối mạng (Type):   ${networkType}`);
-  console.log(`   - Capabilities (${capabilities.length}): ${capabilities.slice(0, 10).join(', ')}${capabilities.length > 10 ? '...' : ''}`);
-  console.log(`================================================================================\n`);
+  console.log(`\n[SmartApp 📦 Device JSON - ${tag}] deviceId: ${deviceId}\n` + JSON.stringify(device, null, 2) + '\n');
 }
+
 
 // =========================================================================
 // 2. Xử lý Cài đặt / Cập nhật (Install & Update Lifecycle)
