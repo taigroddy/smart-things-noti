@@ -1,49 +1,63 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:washer_notifier/services/call_manager.dart';
 import 'package:washer_notifier/services/device_storage.dart';
+import 'package:washer_notifier/services/notification_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    const channel = MethodChannel('flutter_callkit_incoming');
+    NotificationManager.resetAntiSpamForTesting();
+
+    // Mock MethodChannel của flutter_local_notifications
+    const notiChannel = MethodChannel('dexterous.com/flutter/local_notifications');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+        .setMockMethodCallHandler(notiChannel, (MethodCall methodCall) async {
       return null;
     });
   });
 
-  group('Passive Listener: CallManager Tests', () {
-    test('1. Bỏ qua các message không phải lệnh gọi chuông', () async {
+  group('Passive Listener: NotificationManager Tests', () {
+    test('1. Bỏ qua các message không phải lệnh thông báo chuông', () async {
       final syncPayload = {
         'type': 'SYNC_DEVICES',
         'devices': '[{"id":"washer-1","name":"Máy giặt 1"}]',
       };
 
-      await CallManager.handleFCMMessage(syncPayload);
+      await NotificationManager.handleFCMMessage(syncPayload);
     });
 
-    test('2. Xử lý TRIGGER_CALL và chống spam duplicate eventId', () async {
+    test('2. Xử lý TRIGGER_CALL / TRIGGER_NOTI và chống spam duplicate eventId', () async {
       final triggerPayload = {
-        'type': 'TRIGGER_CALL',
+        'type': 'TRIGGER_NOTI',
         'eventId': 'event_unique_001',
         'deviceName': 'Máy Giặt Thông Minh',
         'body': 'Quần áo đã giặt xong!',
       };
 
-      // Cuộc gọi thứ nhất
-      await CallManager.handleFCMMessage(triggerPayload);
+      // Thông báo thứ nhất
+      await NotificationManager.handleFCMMessage(triggerPayload);
 
       // Thử gửi lại cùng eventId -> Hệ thống chống spam tự động bỏ qua
-      await CallManager.handleFCMMessage(triggerPayload);
+      await NotificationManager.handleFCMMessage(triggerPayload);
+    });
+
+    test('3. Hỗ trợ tương thích ngược với type TRIGGER_CALL cũ', () async {
+      final triggerCallPayload = {
+        'type': 'TRIGGER_CALL',
+        'eventId': 'event_call_002',
+        'deviceName': 'Máy Giặt Samsung AI',
+        'body': 'Đã hoàn tất chu trình giặt!',
+      };
+
+      await NotificationManager.handleFCMMessage(triggerCallPayload);
     });
   });
 
   group('Local Storage: DeviceStorage & SYNC_DEVICES Tests', () {
-    test('3. Parse devices từ chuỗi JSON string chuẩn', () {
+    test('4. Parse devices từ chuỗi JSON string chuẩn', () {
       const rawJson = '[{"id":"washer-101","name":"Máy Giặt Samsung AI"},{"id":"washer-102","name":"Máy Sấy Heatpump"}]';
       final list = DeviceStorage.parseDevices(rawJson);
 
@@ -54,7 +68,7 @@ void main() {
       expect(list[1].name, 'Máy Sấy Heatpump');
     });
 
-    test('4. Xử lý Data Message SYNC_DEVICES và lưu vào Local Storage', () async {
+    test('5. Xử lý Data Message SYNC_DEVICES và lưu vào Local Storage', () async {
       final syncPayload = {
         'type': 'SYNC_DEVICES',
         'devices': '[{"id":"dev-999","name":"Máy giặt Phòng Giặt"}]',
@@ -71,7 +85,7 @@ void main() {
       expect(saved[0].name, 'Máy giặt Phòng Giặt');
     });
 
-    test('5. Tương thích ngược với SYNC_DEVICE đơn lẻ', () async {
+    test('6. Tương thích ngược với SYNC_DEVICE đơn lẻ', () async {
       final singleSyncPayload = {
         'type': 'SYNC_DEVICE',
         'deviceId': 'single-dev-01',
@@ -86,6 +100,51 @@ void main() {
       final saved = await DeviceStorage.getDevices();
       expect(saved.length, 1);
       expect(saved[0].id, 'single-dev-01');
+    });
+
+    test('7. Bật/tắt thông báo cho thiết bị và kiểm tra isDeviceEnabled', () async {
+      final syncPayload = {
+        'type': 'SYNC_DEVICES',
+        'devices': '[{"id":"dev-toggle-1","name":"Máy giặt Tầng 2"}]',
+      };
+      await DeviceStorage.handleSyncMessage(syncPayload);
+
+      // Mặc định là bật (true)
+      expect(await DeviceStorage.isDeviceEnabled('dev-toggle-1'), isTrue);
+
+      // Tắt thông báo
+      await DeviceStorage.updateDeviceEnabled('dev-toggle-1', false);
+      expect(await DeviceStorage.isDeviceEnabled('dev-toggle-1'), isFalse);
+
+      // Bật lại
+      await DeviceStorage.updateDeviceEnabled('dev-toggle-1', true);
+      expect(await DeviceStorage.isDeviceEnabled('dev-toggle-1'), isTrue);
+    });
+
+    test('8. NotificationManager tự động bỏ qua thông báo khi thiết bị đã bị tắt chuông', () async {
+      final syncPayload = {
+        'type': 'SYNC_DEVICES',
+        'devices': '[{"id":"dev-muted","name":"Máy giặt Đêm"}]',
+      };
+      await DeviceStorage.handleSyncMessage(syncPayload);
+      await DeviceStorage.updateDeviceEnabled('dev-muted', false);
+
+      final triggerPayload = {
+        'type': 'TRIGGER_NOTI',
+        'deviceId': 'dev-muted',
+        'eventId': 'event_muted_001',
+        'deviceName': 'Máy giặt Đêm',
+        'body': 'Quần áo đã giặt xong!',
+      };
+
+      // Gọi handleFCMMessage, hệ thống sẽ bỏ qua vì dev-muted có isEnabled = false
+      await NotificationManager.handleFCMMessage(triggerPayload);
+    });
+
+    test('9. Xóa sạch thiết bị với clearDevices (Reset kết nối)', () async {
+      await DeviceStorage.clearDevices();
+      final devices = await DeviceStorage.getDevices();
+      expect(devices.isEmpty, isTrue);
     });
   });
 }

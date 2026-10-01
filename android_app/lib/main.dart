@@ -3,13 +3,11 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_callkit_incoming/entities/entities.dart';
-import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'firebase_options.dart';
 
 import 'screens/home_screen.dart';
-import 'services/call_manager.dart';
 import 'services/device_storage.dart';
+import 'services/notification_manager.dart';
 
 // ============================================================
 // BACKGROUND MESSAGE HANDLER — Phải là top-level function
@@ -38,8 +36,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       return;
     }
 
-    // 2. Lập tức kích hoạt Fake Call khi nhận tín hiệu TRIGGER_CALL mà không cần database
-    await CallManager.handleFCMMessage(Map<String, dynamic>.from(data));
+    // 2. Kích hoạt thông báo đẩy kèm nhạc chuông tùy chỉnh
+    await NotificationManager.handleFCMMessage(Map<String, dynamic>.from(data));
   } catch (e) {
     debugPrint('[FCM Background Error]: $e');
   }
@@ -61,6 +59,9 @@ void main() async {
     }
   }
 
+  // Khởi tạo Notification Channel & dịch vụ thông báo tùy chỉnh
+  await NotificationManager.initialize();
+
   // Xin quyền Notification (bắt buộc cho Android 13+ và iOS)
   try {
     final settings = await FirebaseMessaging.instance.requestPermission(
@@ -77,31 +78,14 @@ void main() async {
     debugPrint('[FCM Request Permission Error]: $e');
   }
 
+  // Xin quyền hiển thị thông báo qua Local Notifications plugin
+  await NotificationManager.requestPermissions();
+
   // Đăng ký Background Message Handler để bắt Data Message khi killed / background
   try {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (e) {
     debugPrint('[Background Message Handler Register Error]: $e');
-  }
-
-  // Lắng nghe sự kiện từ màn hình cuộc gọi (chỉ có nút Tắt)
-  try {
-    FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
-      if (event == null) return;
-
-      switch (event.event) {
-        case Event.actionCallDecline:
-          debugPrint('[CallKit] Người dùng nhấn Tắt');
-          break;
-        case Event.actionCallEnded:
-          debugPrint('[CallKit] Cuộc gọi kết thúc');
-          break;
-        default:
-          break;
-      }
-    });
-  } catch (e) {
-    debugPrint('[CallKit Event Listener Error]: $e');
   }
 
   // Tự động subscribe topic chung dự phòng
@@ -123,8 +107,8 @@ void main() async {
       return;
     }
 
-    // 2. Kích hoạt Fake Call khi nhận tín hiệu TRIGGER_CALL
-    await CallManager.handleFCMMessage(Map<String, dynamic>.from(data));
+    // 2. Kích hoạt thông báo đẩy kèm nhạc chuông tùy chỉnh
+    await NotificationManager.handleFCMMessage(Map<String, dynamic>.from(data));
   });
 
   runApp(const WasherNotifierApp());
@@ -144,7 +128,6 @@ class WasherNotifierApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        fontFamily: 'Roboto',
       ),
       home: const HomeScreen(),
     );

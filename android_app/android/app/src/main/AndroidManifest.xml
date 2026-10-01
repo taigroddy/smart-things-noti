@@ -1,8 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ================================================
-         QUYỀN BẮT BUỘC CHO FCM DATA-ONLY MESSAGE
-         VÀ FAKE INCOMING CALL UI
+         QUYỀN CHO THÔNG BÁO ĐẨY KÈM NHẠC CHUÔNG TÙY CHỈNH
          ================================================ -->
 
     <!-- Nhận thông báo (Android 13+) -->
@@ -11,24 +10,15 @@
     <!-- Đánh thức màn hình khi máy giặt xong -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
-    <!-- Hiển thị màn hình cuộc gọi khi điện thoại khoá -->
+    <!-- Hiển thị thông báo dạng pop-up / full screen khi điện thoại khoá -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
 
-    <!-- Cho phép activity hiển thị trên màn hình khoá -->
-    <uses-permission android:name="android.permission.DISABLE_KEYGUARD"/>
-
-    <!-- Chạy FCM background handler (foreground service) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <!-- Rung khi có thông báo máy giặt xong -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
 
     <!-- Kết nối internet để nhận FCM -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-
-    <!-- ================================================
-         VIBRATION (cho cuộc gọi giả)
-         ================================================ -->
-    <uses-permission android:name="android.permission.VIBRATE"/>
 
     <application
         android:label="Washer Notifier"
@@ -72,10 +62,16 @@
             android:value="2"/>
     </application>
 
-    <!-- Truy vấn packages cần thiết cho callkit -->
+    <!-- Truy vấn packages cần thiết cho ứng dụng Samsung SmartThings -->
     <queries>
+        <package android:name="com.samsung.android.oneconnect" />
         <intent>
-            <action android:name="android.intent.action.DIAL"/>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="smartthings" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="market" />
         </intent>
     </queries>
 
