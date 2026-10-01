@@ -12,10 +12,10 @@ void main() {
       ),
     );
 
-    // Kiểm tra UI có tiêu đề và các thành phần chính
+    // Kiểm tra UI có tiêu đề và các thành phần chính (đã Việt hóa)
     expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.text('Washer Notifier'), findsOneWidget);
-    expect(find.text('Người Lắng Nghe Thụ Động'), findsOneWidget);
-    expect(find.text('Thử Nghiệm Cuộc Gọi Giả Lập'), findsOneWidget);
+    expect(find.text('Thông Báo Máy Giặt'), findsOneWidget);
+    expect(find.text('Chờ Kết Nối Máy Giặt'), findsOneWidget);
+    expect(find.text('Sao Chép Mã Kết Nối'), findsWidgets);
   });
 }

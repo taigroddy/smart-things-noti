@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'firebase_options.dart';
-import 'audio_service.dart';
+
 import 'screens/home_screen.dart';
 import 'services/call_manager.dart';
 import 'services/device_storage.dart';
@@ -84,18 +84,14 @@ void main() async {
     debugPrint('[Background Message Handler Register Error]: $e');
   }
 
-  // Lắng nghe sự kiện từ màn hình cuộc gọi giả (Accept / Decline)
+  // Lắng nghe sự kiện từ màn hình cuộc gọi (chỉ có nút Tắt)
   try {
     FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
       if (event == null) return;
 
       switch (event.event) {
-        case Event.actionCallAccept:
-          debugPrint('[CallKit] Người dùng nhấn Xem ngay');
-          await AudioService.playWasherDoneSound();
-          break;
         case Event.actionCallDecline:
-          debugPrint('[CallKit] Người dùng nhấn Bỏ qua');
+          debugPrint('[CallKit] Người dùng nhấn Tắt');
           break;
         case Event.actionCallEnded:
           debugPrint('[CallKit] Cuộc gọi kết thúc');
@@ -140,7 +136,7 @@ class WasherNotifierApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Washer Notifier',
+      title: 'Thông Báo Máy Giặt',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

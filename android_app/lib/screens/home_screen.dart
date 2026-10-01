@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import '../services/call_manager.dart';
 import '../services/device_storage.dart';
 
 /// Màn hình chính của Passive Listener:
@@ -72,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Kết nối SmartThings thành công!',
+                  'Kết nối máy giặt thành công!',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -122,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_fcmToken == null || _fcmToken!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đang khởi tạo Token, vui lòng đợi giây lát...'),
+          content: Text('Đang khởi tạo mã kết nối, vui lòng đợi giây lát...'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -139,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Icon(Icons.check_circle, color: Colors.white, size: 20),
               SizedBox(width: 10),
               Expanded(
-                child: Text('Đã sao chép FCM Token vào bộ nhớ tạm!'),
+                child: Text('Đã sao chép mã kết nối!'),
               ),
             ],
           ),
@@ -156,30 +155,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Kích hoạt test cuộc gọi giả lập tức thì
-  Future<void> _triggerTestCall() async {
-    final defaultDeviceName = _syncedDevices.isNotEmpty
-        ? _syncedDevices.first.name
-        : 'Máy Giặt Thông Minh';
-
-    await CallManager.triggerIncomingCall(
-      callerName: defaultDeviceName,
-      handle: 'Quần áo đã giặt xong! (Kiểm tra cuộc gọi)',
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final hasDevices = _syncedDevices.isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F6F9),
       appBar: AppBar(
         title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.hearing, size: 24),
+            Icon(Icons.local_laundry_service, size: 24),
             SizedBox(width: 8),
             Text(
-              'Washer Notifier',
+              'Thông Báo Máy Giặt',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ],
@@ -191,85 +180,243 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Trạng thái lắng nghe (Passive Listener Status)
-            _buildStatusHeader(),
-
-            const SizedBox(height: 18),
-
-            // 2. Danh sách thiết bị máy giặt đã đồng bộ từ SmartThings
-            if (_syncedDevices.isNotEmpty) ...[
-              _buildSyncedDevicesCard(),
-              const SizedBox(height: 18),
-            ],
-
-            // 3. Thẻ hiển thị FCM Device Token và nút Copy
-            _buildTokenCard(),
-
-            const SizedBox(height: 18),
-
-            // 4. Thẻ hướng dẫn kết nối với SmartThings
-            _buildGuideCard(),
-
-            const SizedBox(height: 24),
-
-            // 5. Nút kích hoạt kiểm thử cuộc gọi giả lập
-            ElevatedButton.icon(
-              onPressed: _triggerTestCall,
-              icon: const Icon(Icons.phone_in_talk, size: 22),
-              label: const Text(
-                'Thử Nghiệm Cuộc Gọi Giả Lập',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 3,
-              ),
-            ),
-          ],
-        ),
+        child: hasDevices
+            ? _buildConnectedView()
+            : _buildOnboardingView(),
       ),
     );
   }
 
-  /// Thẻ trạng thái kết nối
-  Widget _buildStatusHeader() {
-    final hasDevices = _syncedDevices.isNotEmpty;
+  // ============================================================
+  // TRẠNG THÁI A: CHƯA KẾT NỐI — Onboarding step-by-step
+  // ============================================================
 
+  /// Giao diện khi chưa kết nối máy giặt nào — Onboarding step-by-step
+  Widget _buildOnboardingView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Trạng thái chờ kết nối
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.blue.shade200, width: 1.5),
+                ),
+                child: Icon(
+                  Icons.wifi_tethering,
+                  color: Colors.blue.shade700,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Text(
+                          '⏳',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Chờ Kết Nối Máy Giặt',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1565C0),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Hãy làm theo 3 bước bên dưới để kết nối máy giặt.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // Bước 1: Sao chép mã kết nối
+        _buildOnboardingStep(
+          stepNumber: '1',
+          icon: Icons.content_copy,
+          title: 'Sao Chép Mã Kết Nối',
+          description: 'Nhấn nút bên dưới để sao chép mã kết nối vào bộ nhớ tạm.',
+          isActive: true,
+        ),
+
+        const SizedBox(height: 8),
+
+        // Nút sao chép mã kết nối
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isLoadingToken ? null : _copyTokenToClipboard,
+              icon: _isLoadingToken
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(
+                      _isCopied ? Icons.check : Icons.copy,
+                      size: 20,
+                    ),
+              label: Text(
+                _isLoadingToken
+                    ? 'Đang khởi tạo...'
+                    : (_isCopied ? 'Đã Sao Chép Mã' : 'Sao Chép Mã Kết Nối'),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isCopied
+                    ? const Color(0xFF2E7D32)
+                    : const Color(0xFF1565C0),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Bước 2: Mở Samsung SmartThings
+        _buildOnboardingStep(
+          stepNumber: '2',
+          icon: Icons.phone_android,
+          title: 'Mở Ứng Dụng SmartThings',
+          description: 'Mở ứng dụng Samsung SmartThings trên điện thoại, '
+              'tìm và chọn "Washer Notifier" trong danh sách.',
+          isActive: false,
+        ),
+
+        const SizedBox(height: 16),
+
+        // Bước 3: Dán mã và chọn máy giặt
+        _buildOnboardingStep(
+          stepNumber: '3',
+          icon: Icons.link,
+          title: 'Dán Mã & Chọn Máy Giặt',
+          description: 'Dán mã vừa sao chép vào ô yêu cầu, chọn máy giặt của bạn, '
+              'rồi nhấn "Hoàn tất".',
+          isActive: false,
+        ),
+
+        const SizedBox(height: 24),
+
+        // Ghi chú
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F4FF),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFBBDEFB)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue.shade700, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Sau khi hoàn tất, màn hình này sẽ tự động cập nhật '
+                  'và hiển thị máy giặt đã kết nối.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Colors.blue.shade800,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Widget cho mỗi bước onboarding
+  Widget _buildOnboardingStep({
+    required String stepNumber,
+    required IconData icon,
+    required String title,
+    required String description,
+    required bool isActive,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isActive ? const Color(0xFF1565C0) : Colors.grey.shade200,
+          width: isActive ? 1.5 : 1,
+        ),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: Colors.blue.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : [],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
+              color: isActive ? const Color(0xFF1565C0) : Colors.grey.shade100,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.green.shade200, width: 1.5),
             ),
-            child: Icon(
-              Icons.sensors,
-              color: Colors.green.shade700,
-              size: 26,
+            child: Center(
+              child: Text(
+                stepNumber,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isActive ? Colors.white : Colors.grey.shade500,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -279,31 +426,30 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: isActive ? const Color(0xFF1565C0) : Colors.grey.shade500,
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      hasDevices ? 'Đã Kết Nối SmartThings' : 'Người Lắng Nghe Thụ Động',
-                      style: const TextStyle(
+                      title,
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1B5E20),
+                        color: isActive ? const Color(0xFF0D47A1) : Colors.grey.shade600,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  hasDevices
-                      ? 'Đang theo dõi ${_syncedDevices.length} máy giặt qua SmartThings.'
-                      : 'Sẵn sàng nhận tín hiệu FCM và đổ chuông khi giặt xong.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  description,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isActive ? Colors.grey.shade700 : Colors.grey.shade500,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -313,8 +459,94 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Thẻ hiển thị danh sách máy giặt đã được đồng bộ từ SmartThings
-  Widget _buildSyncedDevicesCard() {
+  // ============================================================
+  // TRẠNG THÁI B: ĐÃ KẾT NỐI — Dashboard máy giặt
+  // ============================================================
+
+  /// Giao diện khi đã kết nối máy giặt — Dashboard đơn giản
+  Widget _buildConnectedView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Trạng thái đã kết nối
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.green.shade200, width: 1.5),
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  color: Colors.green.shade700,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Đã Kết Nối',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1B5E20),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Đang theo dõi ${_syncedDevices.length} máy giặt. '
+                      'Bạn sẽ nhận cuộc gọi khi giặt xong.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 18),
+
+        // Danh sách máy giặt
+        _buildDevicesList(),
+      ],
+    );
+  }
+
+  /// Danh sách máy giặt đang được giám sát — bản thân thiện
+  Widget _buildDevicesList() {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -349,7 +581,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
-                  'Máy Giặt Đang Được Giám Sát',
+                  'Máy Giặt Của Bạn',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -374,34 +606,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-
-          // Banner thông báo kết nối thành công
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32), size: 18),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Kết nối SmartThings thành công',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2E7D32),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Danh sách các thiết bị
           ..._syncedDevices.map((device) {
@@ -443,11 +648,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'ID: ${device.id.length > 20 ? '${device.id.substring(0, 18)}...' : device.id}',
+                          'Mã: ${device.id.length > 8 ? device.id.substring(0, 8) : device.id}',
                           style: TextStyle(
                             fontSize: 11,
-                            fontFamily: 'monospace',
-                            color: Colors.grey.shade600,
+                            color: Colors.grey.shade500,
                           ),
                         ),
                       ],
@@ -473,7 +677,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 4),
                         const Text(
-                          'Tự động',
+                          'Kết nối',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -487,139 +691,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           }),
-        ],
-      ),
-    );
-  }
-
-  /// Thẻ hiển thị Token và nút sao chép
-  Widget _buildTokenCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFBBDEFB), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.vpn_key, color: Color(0xFF1565C0), size: 22),
-              SizedBox(width: 10),
-              Text(
-                'FCM Device Token',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0D47A1),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: _isLoadingToken
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : SelectableText(
-                    _fcmToken ?? 'Không thể lấy Token',
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      color: Color(0xFF334155),
-                      height: 1.4,
-                    ),
-                  ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _copyTokenToClipboard,
-              icon: Icon(
-                _isCopied ? Icons.check : Icons.copy,
-                size: 20,
-              ),
-              label: Text(
-                _isCopied ? 'Đã Sao Chép Token' : 'Sao Chép FCM Token',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isCopied
-                    ? const Color(0xFF2E7D32)
-                    : const Color(0xFF1565C0),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Thẻ hướng dẫn nhanh
-  Widget _buildGuideCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF9E6),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFFE082)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.amber.shade900, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Hướng dẫn kết nối SmartThings',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.amber.shade900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '1. Nhấn nút "Sao Chép FCM Token" ở trên.\n'
-            '2. Mở SmartThings App > Cài đặt SmartApp Washer Notifier.\n'
-            '3. Dán Token vào ô "Lấy mã từ Ứng dụng Washer Notifier" và chọn máy giặt.\n'
-            '4. Xong! Bạn sẽ nhận được cuộc gọi tự động ngay khi máy giặt giặt xong.',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: Colors.amber.shade900,
-              height: 1.5,
-            ),
-          ),
         ],
       ),
     );
