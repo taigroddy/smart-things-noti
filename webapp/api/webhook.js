@@ -30,25 +30,15 @@ export const smartApp = new SmartApp();
 smartApp.enableEventLogging(2);
 
 // =========================================================================
-// 1. Khởi tạo SmartApp & Giao diện cấu hình (Configuration Lifecycle)
+// 1. Khởi tạo SmartApp & Giao diện cấu hình (Configuration Lifecycle) - MINIMAL DEBUG
 // =========================================================================
 smartApp.page('mainPage', (context, page, configData) => {
   page.name('Washer Notifier');
-  page.section('settings', section => {
-    section.name('Cấu hình Thông báo Máy Giặt');
-
-    section.stringSetting('fcmToken')
-      .name('FCM Device Token')
-      .description('Dán FCM Device Token từ ứng dụng di động Washer Notifier')
-      .required(true);
-
-    section.deviceSetting('washerDevice')
-      .name('Máy Giặt Samsung')
-      .description('Chọn máy giặt cần theo dõi')
-      .capabilities(['washerOperatingState'])
-      .permissions('r')
-      .multiple(true)
-      .required(true);
+  page.section('infoSection', section => {
+    section.name('Thông Báo');
+    section.paragraphSetting('info')
+      .text('Hello World')
+      .description('SmartApp đang hoạt động bình thường.');
   });
 });
 
