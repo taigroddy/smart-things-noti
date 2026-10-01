@@ -7,12 +7,12 @@ import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'firebase_options.dart';
 import 'audio_service.dart';
-import 'screens/device_list_screen.dart';
+import 'screens/home_screen.dart';
 import 'services/call_manager.dart';
 
 // ============================================================
 // BACKGROUND MESSAGE HANDLER — Phải là top-level function
-// Được gọi khi app bị kill hoặc chạy ngầm
+// Chạy ngay cả khi app bị tắt hoàn toàn (killed state) hoặc chạy ngầm
 // ============================================================
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -26,9 +26,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     }
 
     final data = message.data;
-    debugPrint('[FCM Background] Nhận message: ${jsonEncode(data)}');
+    debugPrint('[FCM Background Passive] Nhận Data Message: ${jsonEncode(data)}');
 
-    // Chuyển qua CallManager kiểm tra trùng deviceId và chống spam 2 phút
+    // Lập tức kích hoạt Fake Call khi nhận tín hiệu TRIGGER_CALL mà không cần database
     await CallManager.handleFCMMessage(Map<String, dynamic>.from(data));
   } catch (e) {
     debugPrint('[FCM Background Error]: $e');
@@ -38,7 +38,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Khởi tạo Firebase với cơ chế an toàn kép
+  // Khởi tạo Firebase với cơ chế dự phòng an toàn
   try {
     await Firebase.initializeApp();
   } catch (e) {
@@ -67,7 +67,7 @@ void main() async {
     debugPrint('[FCM Request Permission Error]: $e');
   }
 
-  // Đăng ký background message handler an toàn
+  // Đăng ký Background Message Handler để bắt Data Message khi killed / background
   try {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (e) {
@@ -98,15 +98,14 @@ void main() async {
     debugPrint('[CallKit Event Listener Error]: $e');
   }
 
-  // Tự động subscribe topic 'washer_done_alerts'
+  // Tự động subscribe topic chung dự phòng
   try {
     FirebaseMessaging.instance.subscribeToTopic('washer_done_alerts');
   } catch (_) {}
 
-  // Lắng nghe foreground FCM
+  // Lắng nghe Foreground FCM (khi người dùng đang mở app)
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-    debugPrint('[FCM Foreground] Nhận message: ${jsonEncode(message.data)}');
-    // Chuyển qua CallManager kiểm tra trùng deviceId và chống spam 2 phút
+    debugPrint('[FCM Foreground Passive] Nhận Data Message: ${jsonEncode(message.data)}');
     await CallManager.handleFCMMessage(Map<String, dynamic>.from(message.data));
   });
 
@@ -129,7 +128,7 @@ class WasherNotifierApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const DeviceListScreen(),
+      home: const HomeScreen(),
     );
   }
 }
