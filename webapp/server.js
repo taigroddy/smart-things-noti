@@ -1,9 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
 import webhookHandler from './api/webhook.js';
-import devicesHandler from './api/devices.js';
-import authLoginHandler from './api/auth/login.js';
-import authCallbackHandler from './api/auth/callback.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,20 +11,6 @@ app.use(express.json());
 // Health check endpoint cho Docker / Load Balancer
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', uptime: process.uptime() });
-});
-
-// Endpoint SmartThings OAuth2 Authentication Flow
-app.all(['/api/auth/login', '/api/auth/login.js'], async (req, res) => {
-  await authLoginHandler(req, res);
-});
-
-app.all(['/api/auth/callback', '/api/auth/callback.js'], async (req, res) => {
-  await authCallbackHandler(req, res);
-});
-
-// Endpoint lấy danh sách thiết bị SmartThings cho app di động
-app.all(['/api/devices', '/api/devices.js'], async (req, res) => {
-  await devicesHandler(req, res);
 });
 
 // Endpoint webhook chính (hỗ trợ cả /api/webhook và /api/webhook.js khi chạy qua Vercel rewrite)
