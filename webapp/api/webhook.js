@@ -32,6 +32,36 @@ smartApp.page('mainPage', (context, page, configData) => {
   });
 });
 
+/**
+ * Helper in chi tiết thông tin thiết bị (raw JSON và tóm tắt các trường hữu dụng)
+ */
+function logDeviceDetails(tag, deviceId, device) {
+  if (!device) return;
+  console.log(`\n================== [${tag}] CHI TIẾT THIẾT BỊ (${deviceId}) ==================`);
+  console.log('[Raw JSON Device Object]:\n' + JSON.stringify(device, null, 2));
+
+  const categories = device.components?.flatMap((c) => c.categories?.map((cat) => cat.name)).filter(Boolean) || [];
+  const capabilities = device.components?.flatMap((c) => c.capabilities?.map((cap) => cap.id)).filter(Boolean) || [];
+  const model = device.ocf?.modelNumber || device.deviceTypeName || 'N/A';
+  const manufacturer = device.manufacturerName || 'N/A';
+  const label = device.label || 'Chưa đặt tên riêng';
+  const name = device.name || 'N/A';
+  const roomId = device.roomId || 'N/A';
+  const locationId = device.locationId || 'N/A';
+  const networkType = device.deviceNetworkType || 'N/A';
+
+  console.log('📋 [Tóm tắt thông tin hữu dụng]:');
+  console.log(`   - Tên hiển thị (Label):  ${label}`);
+  console.log(`   - Tên hệ thống (Name):   ${name}`);
+  console.log(`   - Mã Model (Model):      ${model}`);
+  console.log(`   - Nhà sản xuất:          ${manufacturer}`);
+  console.log(`   - Loại thiết bị (Cats):  ${categories.join(', ') || 'N/A'}`);
+  console.log(`   - Phòng / Vị trí (Room): Room ID: ${roomId} | Location ID: ${locationId}`);
+  console.log(`   - Kết nối mạng (Type):   ${networkType}`);
+  console.log(`   - Capabilities (${capabilities.length}): ${capabilities.slice(0, 10).join(', ')}${capabilities.length > 10 ? '...' : ''}`);
+  console.log(`================================================================================\n`);
+}
+
 // =========================================================================
 // 2. Xử lý Cài đặt / Cập nhật (Install & Update Lifecycle)
 // =========================================================================
@@ -80,13 +110,19 @@ async function handleInstallOrUpdate(context) {
     const deviceId = item.deviceConfig?.deviceId;
     if (!deviceId) continue;
 
+    console.log(`[SmartApp 🔍] Đang lấy thông tin thiết bị: ${deviceId} (componentId: ${item.deviceConfig?.componentId || 'main'})`);
     let deviceName = 'Máy giặt Samsung';
     try {
       if (context.api?.devices) {
         const device = await context.api.devices.get(deviceId);
+        logDeviceDetails('INSTALL/UPDATE', deviceId, device);
         deviceName = device.label || device.name || deviceName;
+      } else {
+        console.warn(`[SmartApp ⚠️] context.api.devices không khả dụng cho deviceId ${deviceId}`);
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn(`[SmartApp ⚠️] Không thể lấy metadata cho deviceId ${deviceId}: ${err.message}`);
+    }
 
     devicesList.push({
       id: deviceId,
@@ -129,12 +165,18 @@ async function handleWasherEvent(context, event) {
     const deviceId = event.deviceId;
     let deviceName = 'Máy giặt Samsung';
 
+    console.log(`[SmartApp 🔍] Đang lấy thông tin thiết bị cho sự kiện hoàn tất: ${deviceId}`);
     try {
       if (context.api?.devices && deviceId) {
         const device = await context.api.devices.get(deviceId);
+        logDeviceDetails('EVENT', deviceId, device);
         deviceName = device.label || device.name || deviceName;
+      } else {
+        console.warn(`[SmartApp ⚠️] context.api.devices không khả dụng hoặc thiếu deviceId (${deviceId})`);
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn(`[SmartApp ⚠️] Không thể lấy metadata cho deviceId ${deviceId}: ${err.message}`);
+    }
 
     console.log(`[SmartApp 🎉] MÁY GIẶT ĐÃ XONG! Bắn TRIGGER_CALL tới: ${fcmToken ? fcmToken.slice(0, 12) + '...' : 'null'}`);
     // Gọi Firebase Admin bắn Data Message tới fcmToken đó với payload:
