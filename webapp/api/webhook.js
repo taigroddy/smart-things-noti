@@ -128,28 +128,18 @@ async function handleWasherEvent(context, event) {
   const value = String(event.value || '').toLowerCase();
   console.log(`[SmartApp Event] Nhận sự kiện: attribute=${event.attribute}, value=${value}, deviceId=${event.deviceId}`);
 
-  // Khi nhận sự kiện máy giặt báo xong (finished, stop hoặc stopped):
   if (value === 'finished' || value === 'stop' || value === 'stopped') {
     const deviceId = event.deviceId;
-    let fcmToken = process.env.FCM_DEVICE_TOKEN; // Fallback từ biến môi trường
     
-    // Lấy lại fcmToken trực tiếp từ SmartThings Cloud (đề phòng event không mang theo config)
-    try {
-      if (context.api?.installedApps) {
-        const appConfig = await context.api.installedApps.getConfiguration(context.installedAppId);
-        const tokenConfig = appConfig.find(item => item.configId === 'fcmToken');
-        if (tokenConfig && tokenConfig.stringConfig) {
-          fcmToken = tokenConfig.stringConfig.value;
-        }
-      }
-    } catch (configErr) {
-      console.warn('[SmartApp ⚠️] Không thể lấy lại cấu hình từ Cloud:', configErr.message);
-    }
+    // 1. Lấy Token xịn gửi kèm ngay trong Payload sự kiện
+    let fcmToken = context.configStringValue('fcmToken');
     
-    // Nếu cloud lỗi, fallback về config cũ
-    if (!fcmToken) {
-      fcmToken = context.configStringValue('fcmToken');
+    // 2. Bọc lót: Đọc thẳng từ raw JSON nếu SDK không tự parse được
+    if (!fcmToken && context.config && context.config.fcmToken) {
+      fcmToken = context.config.fcmToken[0]?.stringConfig?.value;
     }
+
+    // (Loại bỏ hoàn toàn đoạn gọi context.api.installedApps.getConfiguration để không bị lỗi 400 nữa)
 
     let deviceName = 'Máy giặt Samsung';
     console.log(`[SmartApp 🔍] Đang lấy tên thiết bị cho sự kiện hoàn tất: ${deviceId}`);
@@ -162,7 +152,12 @@ async function handleWasherEvent(context, event) {
       console.warn(`[SmartApp ⚠️] Không thể lấy metadata cho deviceId ${deviceId}: ${err.message}`);
     }
 
-    console.log(`[SmartApp 🎉] MÁY GIẶT ĐÃ XONG! Bắn TRIGGER_CALL tới: ${fcmToken ? fcmToken.slice(0, 12) + '...' : 'LỖI: KHÔNG CÓ TOKEN'}`);
+    // Lọc bỏ chuỗi rác (/v1/cs...) nếu lỡ có
+    if (fcmToken && fcmToken.startsWith('/v1/')) {
+        fcmToken = null; 
+    }
+
+    console.log(`[SmartApp 🎉] MÁY GIẶT ĐÃ XONG! Bắn tới Token: ${fcmToken ? fcmToken.slice(0, 20) + '...' : 'LỖI: KHÔNG CÓ TOKEN'}`);
     
     if (fcmToken) {
       try {
@@ -172,15 +167,16 @@ async function handleWasherEvent(context, event) {
           deviceName,
           eventId: event.eventId || `${Date.now()}`,
         });
-        console.log('[SmartApp ✅] Đã bắn TRIGGER_CALL thành công!');
+        console.log('[SmartApp ✅] Đã bắn TRIGGER_CALL thành công tới Firebase!');
       } catch (fcmErr) {
-        console.error('[SmartApp ❌] Lỗi khi gửi TRIGGER_CALL:', fcmErr.message);
+        console.error('[SmartApp ❌] Lỗi khi gửi Firebase:', fcmErr.message);
       }
     } else {
-      console.error('[SmartApp ❌] Không tìm thấy fcmToken để gửi thông báo!');
+      console.error('[SmartApp ❌] Bỏ qua vì không tìm thấy fcmToken hợp lệ!');
     }
   }
 }
+
 
 // Đăng ký đúng tên Handler ở đây:
 smartApp.subscribedEventHandler('washerHandlerStandard', handleWasherEvent);
